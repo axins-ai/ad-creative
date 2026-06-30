@@ -806,8 +806,16 @@ function openTask(id) {
   for (var t = 0; t < keys.length; t++) {
     var tk = keys[t];
     if (task.materials[tk]) {
-      for (var j = 0; j < task.materials[tk].length; j++) {
-        gSelected[tk].push(task.materials[tk][j]);
+      if (tk === "中段") {
+        // 中段素材放入 gMidSlotList[0]
+        gMidSlotList[0] = [];
+        for (var j = 0; j < task.materials[tk].length; j++) {
+          gMidSlotList[0].push(task.materials[tk][j]);
+        }
+      } else {
+        for (var j = 0; j < task.materials[tk].length; j++) {
+          gSelected[tk].push(task.materials[tk][j]);
+        }
       }
     }
   }
@@ -855,12 +863,20 @@ function saveTask() {
     basicAttrs: { biz:gBasicAttrs.biz, channel:gBasicAttrs.channel, optimizer:gBasicAttrs.optimizer },
     outputs: []
   };
-  var keys = ["前贴","中段","尾帧"];
+  var keys = ["前贴","尾帧"];
   for (var t = 0; t < keys.length; t++) {
     for (var i = 0; i < gSelected[keys[t]].length; i++) {
       td.materials[keys[t]].push(gSelected[keys[t]][i]);
     }
   }
+  // 中段素材从 gMidSlotList 读取
+  var midAll = [];
+  for (var si = 0; si < gMidSlotList.length; si++) {
+    for (var mi = 0; mi < gMidSlotList[si].length; mi++) {
+      midAll.push(gMidSlotList[si][mi]);
+    }
+  }
+  td.materials["中段"] = midAll;
   for (var j = 0; j < gActiveParams.length; j++) td.namingParams.push(gActiveParams[j]);
 
   if (gEditingTaskId) {
@@ -1043,6 +1059,19 @@ function renderMidSlotCard(idx) {
     (gMidSlotList.length>1?"<span class=\"slot-del\" onclick=\"event.stopPropagation();removeMidSlot("+idx+")\">删除此槽</span>":"")+"</div>"+
     "<div class=\"sel-btn\">点击选择中段原料（支持多选）</div>"+
     (tags?"<div class=\"tags-wrap\">"+tags+"</div>":"")+"</div>";
+}
+
+
+function addMidSlot() {
+  if (gMidSlotList.length >= 10) return;
+  gMidSlotList.push([]);
+  renderCards();
+}
+
+function removeMidSlot(idx) {
+  if (gMidSlotList.length <= 1) return;
+  gMidSlotList.splice(idx, 1);
+  renderCards();
 }
 
 
@@ -1355,7 +1384,7 @@ function startProduction() {
   // 生成中段的所有组合（各槽的笛卡尔积）
   function genCombos(slots, idx, cur) {
     if (idx >= slots.length) {
-      out2.push(cur.slice());
+      midCombos.push(cur.slice());
       return;
     }
     if (slots[idx].length === 0) {
